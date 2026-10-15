@@ -23,6 +23,7 @@ RAW_MODULES = {
     "ubicacion": "sitio_ubicacion.csv",
     "ventas": "ventas_ingresos.csv",
     "factores_exp": "factores_expansion.csv",
+    "inclusion_financiera": "inclusion_financiera.csv",
 }
 
 KEY_COLUMNS = ["directorio", "secuencia_p", "secuencia_encuesta"]
@@ -170,6 +171,51 @@ STAGING_COLUMNS = {
         "directorio",
         "secuencia_p",
         "secuencia_encuesta",
+        "fex_c",
+    ],
+    "inclusion_financiera": [
+        "directorio",
+        "secuencia_p",
+        "secuencia_encuesta",
+        "p1764_1",
+        "p1764_2",
+        "p1764_3",
+        "p1764_4",
+        "p1764_5",
+        "p1764_6",
+        "p1764_7",
+        "p1765",
+        "p1567",
+        "p1569",
+        "p1568",
+        "p1571_1",
+        "p1571_2",
+        "p1571_3",
+        "p1571_4",
+        "p1571_5",
+        "p1571_6",
+        "p1570",
+        "p1570_1",
+        "p1570_2",
+        "p1572_1",
+        "p1572_2",
+        "p1572_3",
+        "p1572_4",
+        "p1572_5",
+        "p1572_6",
+        "p3014",
+        "p1573_1",
+        "p1573_2",
+        "p1573_3",
+        "p1573_4",
+        "p1573_5",
+        "p1573_6",
+        "p1574",
+        "p1771",
+        "clase_te",
+        "cod_depto",
+        "area",
+        "f_exp",
         "fex_c",
     ],
 }
@@ -371,7 +417,12 @@ def export_core_parquet(engine) -> Path:
         engine,
     )
 
-    for table_name in ["caracteristicas", "ubicacion", "ventas"]:
+    for table_name in [
+        "caracteristicas",
+        "ubicacion",
+        "ventas",
+        "inclusion_financiera",
+    ]:
         extra = pd.read_sql_query(
             f"SELECT * FROM staging.{table_name} ORDER BY directorio, secuencia_p, secuencia_encuesta",
             engine,

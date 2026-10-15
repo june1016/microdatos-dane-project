@@ -49,6 +49,7 @@ MODULES = {
     "ubicacion": "sitio_ubicacion.csv",
     "ventas": "ventas_ingresos.csv",
     "factores_exp": "factores_expansion.csv",
+    "inclusion_financiera": "inclusion_financiera.csv",
 }
 
 

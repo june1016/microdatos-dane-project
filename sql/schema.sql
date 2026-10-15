@@ -1,17 +1,25 @@
 -- ============================================================================
--- schema.sql — DANE EMICRON 2023 (PARTE 1: schemas + raw)
--- PASO 0 (solo primera vez, conectado a la BD 'postgres'):
--- CREATE DATABASE emicron_db;
--- Luego conectarse a 'emicron_db' y ejecutar este script.
+-- schema.sql — DANE EMICRON 2023
+-- Define los esquemas RAW (carga cruda) y STAGING (tipado y documentado),
+-- sus tablas, comentarios e índices para los 6 módulos de la encuesta:
+-- identificación, características, ubicación, ventas, factores de expansión
+-- e inclusión financiera.
+--
+-- PASO 0 (solo la primera vez, conectado a la BD 'postgres'):
+--   CREATE DATABASE emicron_db;
+--   Luego conectarse a 'emicron_db' y ejecutar este script completo.
 -- ============================================================================
 
 CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS staging;
 
 -- ============================================================================
--- RAW — nombres en MAYÚSCULAS idénticos al CSV, todo TEXT (carga sin fricción)
+-- 1. ESQUEMA RAW
+-- Nombres de columna en MAYÚSCULAS, idénticos al CSV fuente. Todo TEXT para
+-- permitir la carga sin fricción (sin errores de tipo en el COPY/INSERT).
 -- ============================================================================
 
+-- 1.1 Identificación — llaves, propietario y clasificación CIIU
 DROP TABLE IF EXISTS raw.identificacion CASCADE;
 CREATE TABLE raw.identificacion (
     "DIRECTORIO" TEXT,
@@ -37,6 +45,7 @@ CREATE TABLE raw.identificacion (
     CONSTRAINT pk_raw_identificacion PRIMARY KEY ("DIRECTORIO", "SECUENCIA_P", "SECUENCIA_ENCUESTA")
 );
 
+-- 1.2 Características — formalización, registros y declaraciones de impuestos
 DROP TABLE IF EXISTS raw.caracteristicas CASCADE;
 CREATE TABLE raw.caracteristicas (
     "DIRECTORIO" TEXT,
@@ -61,6 +70,7 @@ CREATE TABLE raw.caracteristicas (
     CONSTRAINT pk_raw_caracteristicas PRIMARY KEY ("DIRECTORIO", "SECUENCIA_P", "SECUENCIA_ENCUESTA")
 );
 
+-- 1.3 Ubicación — tipo de local, visibilidad y geografía
 DROP TABLE IF EXISTS raw.ubicacion CASCADE;
 CREATE TABLE raw.ubicacion (
     "DIRECTORIO" TEXT,
@@ -81,6 +91,7 @@ CREATE TABLE raw.ubicacion (
     CONSTRAINT pk_raw_ubicacion PRIMARY KEY ("DIRECTORIO", "SECUENCIA_P", "SECUENCIA_ENCUESTA")
 );
 
+-- 1.4 Ventas — ingresos por fuente, meses de operación y agregados económicos
 DROP TABLE IF EXISTS raw.ventas CASCADE;
 CREATE TABLE raw.ventas (
     "DIRECTORIO" TEXT,
@@ -158,6 +169,7 @@ CREATE TABLE raw.ventas (
     CONSTRAINT pk_raw_ventas PRIMARY KEY ("DIRECTORIO", "SECUENCIA_P", "SECUENCIA_ENCUESTA")
 );
 
+-- 1.5 Factores de expansión — fuente oficial de fex_c
 DROP TABLE IF EXISTS raw.factores_exp CASCADE;
 CREATE TABLE raw.factores_exp (
     "DIRECTORIO" TEXT,
@@ -167,12 +179,75 @@ CREATE TABLE raw.factores_exp (
     CONSTRAINT pk_raw_factores_exp PRIMARY KEY ("DIRECTORIO", "SECUENCIA_P", "SECUENCIA_ENCUESTA")
 );
 
+-- 1.6 Inclusión financiera — crédito, medios de pago y ahorro (módulo diferenciador)
+DROP TABLE IF EXISTS raw.inclusion_financiera CASCADE;
+CREATE TABLE raw.inclusion_financiera (
+    "DIRECTORIO" TEXT,
+    "SECUENCIA_P" TEXT,
+    "SECUENCIA_ENCUESTA" TEXT,
+    "P1764_1" TEXT,
+    "P1764_2" TEXT,
+    "P1764_3" TEXT,
+    "P1764_4" TEXT,
+    "P1764_5" TEXT,
+    "P1764_6" TEXT,
+    "P1764_7" TEXT,
+    "P1765" TEXT,
+    "P1567" TEXT,
+    "P1569" TEXT,
+    "P1568" TEXT,
+    "P1571_1" TEXT,
+    "P1571_2" TEXT,
+    "P1571_3" TEXT,
+    "P1571_4" TEXT,
+    "P1571_5" TEXT,
+    "P1571_6" TEXT,
+    "P1570" TEXT,
+    "P1570_1" TEXT,
+    "P1570_2" TEXT,
+    "P1572_1" TEXT,
+    "P1572_2" TEXT,
+    "P1572_3" TEXT,
+    "P1572_4" TEXT,
+    "P1572_5" TEXT,
+    "P1572_6" TEXT,
+    "P3014" TEXT,
+    "P1573_1" TEXT,
+    "P1573_2" TEXT,
+    "P1573_3" TEXT,
+    "P1573_4" TEXT,
+    "P1573_5" TEXT,
+    "P1573_6" TEXT,
+    "P1574" TEXT,
+    "P1771" TEXT,
+    "CLASE_TE" TEXT,
+    "COD_DEPTO" TEXT,
+    "AREA" TEXT,
+    "F_EXP" TEXT,
+    CONSTRAINT pk_raw_inclusion_financiera
+        PRIMARY KEY ("DIRECTORIO", "SECUENCIA_P", "SECUENCIA_ENCUESTA")
+);
+
+-- ----------------------------------------------------------------------------
+-- Nota — PKs en RAW: se definen inline en cada CREATE TABLE y garantizan la
+-- unicidad de la llave compuesta desde el momento de la carga. Si algún CSV
+-- trae duplicados de llave, el INSERT falla aquí (bodega inmutable) y no en
+-- staging: es el punto correcto para detectarlo (fail-fast).
+-- ----------------------------------------------------------------------------
+
 -- ============================================================================
--- STAGING — snake_case, tipado exacto, fex_c replicado en todas las tablas
--- NUMERIC(15,2) dinero | NUMERIC(20,10) factores | VARCHAR códigos con
--- cero a la izquierda | INTEGER conteos/categóricas
+-- 2. ESQUEMA STAGING
+-- Nombres en snake_case y tipado exacto. fex_c se replica en todas las
+-- tablas como factor de expansión oficial para agregaciones ponderadas.
+--
+-- Convenciones de tipo:
+--   NUMERIC(15,2)  -> valores monetarios
+--   NUMERIC(20,10) -> factores de expansión
+--   VARCHAR        -> códigos que deben preservar ceros a la izquierda
+--   INTEGER        -> conteos y variables categóricas
 -- ============================================================================
 
+-- 2.1 Identificación
 DROP TABLE IF EXISTS staging.identificacion CASCADE;
 CREATE TABLE staging.identificacion (
     directorio          INTEGER NOT NULL,
@@ -222,6 +297,7 @@ COMMENT ON COLUMN staging.identificacion.grupos12 IS 'Rama de actividad CIIU Rev
 COMMENT ON COLUMN staging.identificacion.f_exp IS 'Factor de expansión del módulo (referencia, NO usar en agregaciones)';
 COMMENT ON COLUMN staging.identificacion.fex_c IS 'Factor de expansión departamental oficial 2023 (usar en TODA agregación poblacional)';
 
+-- 2.2 Características
 DROP TABLE IF EXISTS staging.caracteristicas CASCADE;
 CREATE TABLE staging.caracteristicas (
     directorio          INTEGER NOT NULL,
@@ -269,6 +345,7 @@ COMMENT ON COLUMN staging.caracteristicas.area IS 'Ciudades principales y áreas
 COMMENT ON COLUMN staging.caracteristicas.f_exp IS 'Factor de expansión del módulo (referencia, NO usar en agregaciones)';
 COMMENT ON COLUMN staging.caracteristicas.fex_c IS 'Factor de expansión departamental oficial 2023';
 
+-- 2.3 Ubicación
 DROP TABLE IF EXISTS staging.ubicacion CASCADE;
 CREATE TABLE staging.ubicacion (
     directorio          INTEGER NOT NULL,
@@ -308,6 +385,7 @@ COMMENT ON COLUMN staging.ubicacion.area IS 'Ciudades principales y áreas metro
 COMMENT ON COLUMN staging.ubicacion.f_exp IS 'Factor de expansión del módulo (referencia, NO usar en agregaciones)';
 COMMENT ON COLUMN staging.ubicacion.fex_c IS 'Factor de expansión departamental oficial 2023';
 
+-- 2.4 Ventas
 DROP TABLE IF EXISTS staging.ventas CASCADE;
 CREATE TABLE staging.ventas (
     directorio                  INTEGER NOT NULL,
@@ -404,7 +482,7 @@ COMMENT ON COLUMN staging.ventas.p3066 IS 'Por ventas de mercancías (mes anteri
 COMMENT ON COLUMN staging.ventas.p3067 IS 'Otros ingresos (mes anterior)';
 COMMENT ON COLUMN staging.ventas.p3092 IS 'Ingresos por venta de productos agrícolas, ganaderos, pesqueros o mineros (mes anterior)';
 COMMENT ON COLUMN staging.ventas.p3093 IS 'Otros ingresos (mes anterior)';
-COMMENT ON COLUMN staging.ventas.p4036 IS 'P4036 (variable de control del módulo)';
+COMMENT ON COLUMN staging.ventas.p4036 IS 'Variable de control interno del módulo de ventas (sin descripción semántica en el diccionario DANE)';
 COMMENT ON COLUMN staging.ventas.p4005 IS 'Ventas de productos elaborados (mismo mes año anterior)';
 COMMENT ON COLUMN staging.ventas.p4006 IS 'Servicio de maquila (mismo mes año anterior)';
 COMMENT ON COLUMN staging.ventas.p4007 IS 'Servicios de reparación y mantenimiento (mismo mes año anterior)';
@@ -419,7 +497,7 @@ COMMENT ON COLUMN staging.ventas.p4015 IS 'Por ventas de mercancías (mismo mes 
 COMMENT ON COLUMN staging.ventas.p4016 IS 'Otros ingresos (mismo mes año anterior)';
 COMMENT ON COLUMN staging.ventas.p4017 IS 'Ingresos por venta de productos agrícolas, ganaderos, pesqueros o mineros (mismo mes año anterior)';
 COMMENT ON COLUMN staging.ventas.p4018 IS 'Otros ingresos (mismo mes año anterior)';
-COMMENT ON COLUMN staging.ventas.p4037 IS 'P4037 (variable de control del módulo)';
+COMMENT ON COLUMN staging.ventas.p4037 IS 'Variable de control interno del módulo de ventas (sin descripción semántica en el diccionario DANE)';
 COMMENT ON COLUMN staging.ventas.p3068_ene IS 'Meses de funcionamiento año anterior: enero';
 COMMENT ON COLUMN staging.ventas.p3068_feb IS 'Meses de funcionamiento año anterior: febrero';
 COMMENT ON COLUMN staging.ventas.p3068_mar IS 'Meses de funcionamiento año anterior: marzo';
@@ -461,6 +539,7 @@ COMMENT ON COLUMN staging.ventas.area IS 'Ciudades principales y áreas metropol
 COMMENT ON COLUMN staging.ventas.f_exp IS 'Factor de expansión del módulo (referencia, NO usar en agregaciones)';
 COMMENT ON COLUMN staging.ventas.fex_c IS 'Factor de expansión departamental oficial 2023';
 
+-- 2.5 Factores de expansión
 DROP TABLE IF EXISTS staging.factores_exp CASCADE;
 CREATE TABLE staging.factores_exp (
     directorio          INTEGER NOT NULL,
@@ -476,31 +555,133 @@ COMMENT ON COLUMN staging.factores_exp.secuencia_p IS 'Secuencia P (persona dent
 COMMENT ON COLUMN staging.factores_exp.secuencia_encuesta IS 'Secuencia Encuesta (negocio de la persona)';
 COMMENT ON COLUMN staging.factores_exp.fex_c IS 'Factor de expansión departamental oficial 2023 (usar en TODA agregación poblacional)';
 
+-- 2.6 Inclusión financiera (módulo diferenciador)
+DROP TABLE IF EXISTS staging.inclusion_financiera CASCADE;
+CREATE TABLE staging.inclusion_financiera (
+    directorio          INTEGER NOT NULL,
+    secuencia_p         INTEGER NOT NULL,
+    secuencia_encuesta  INTEGER NOT NULL,
+    p1764_1             INTEGER,
+    p1764_2             INTEGER,
+    p1764_3             INTEGER,
+    p1764_4             INTEGER,
+    p1764_5             INTEGER,
+    p1764_6             INTEGER,
+    p1764_7             INTEGER,
+    p1765               INTEGER,
+    p1567               INTEGER,
+    p1569               INTEGER,
+    p1568               INTEGER,
+    p1571_1             INTEGER,
+    p1571_2             INTEGER,
+    p1571_3             INTEGER,
+    p1571_4             INTEGER,
+    p1571_5             INTEGER,
+    p1571_6             INTEGER,
+    p1570               INTEGER,
+    p1570_1             NUMERIC(15,2),
+    p1570_2             NUMERIC(15,2),
+    p1572_1             INTEGER,
+    p1572_2             INTEGER,
+    p1572_3             INTEGER,
+    p1572_4             INTEGER,
+    p1572_5             INTEGER,
+    p1572_6             INTEGER,
+    p3014               INTEGER,
+    p1573_1             INTEGER,
+    p1573_2             INTEGER,
+    p1573_3             INTEGER,
+    p1573_4             INTEGER,
+    p1573_5             INTEGER,
+    p1573_6             INTEGER,
+    p1574               INTEGER,
+    p1771               INTEGER,
+    clase_te            INTEGER,
+    cod_depto           VARCHAR(2),
+    area                VARCHAR(2),
+    f_exp               NUMERIC(20,10),
+    fex_c               NUMERIC(20,10),
+    CONSTRAINT pk_inclusion_financiera
+        PRIMARY KEY (directorio, secuencia_p, secuencia_encuesta)
+);
+
+COMMENT ON TABLE staging.inclusion_financiera IS 'Módulo de inclusión financiera: crédito, medios de pago y ahorro';
+COMMENT ON COLUMN staging.inclusion_financiera.directorio IS 'Directorio (identificador del hogar)';
+COMMENT ON COLUMN staging.inclusion_financiera.secuencia_p IS 'Secuencia P (persona dentro del hogar)';
+COMMENT ON COLUMN staging.inclusion_financiera.secuencia_encuesta IS 'Secuencia Encuesta (negocio de la persona)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1764_1 IS '¿Cuáles formas de pago acepta en su negocio? (opción 1 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1764_2 IS '¿Cuáles formas de pago acepta en su negocio? (opción 2 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1764_3 IS '¿Cuáles formas de pago acepta en su negocio? (opción 3 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1764_4 IS '¿Cuáles formas de pago acepta en su negocio? (opción 4 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1764_5 IS '¿Cuáles formas de pago acepta en su negocio? (opción 5 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1764_6 IS '¿Cuáles formas de pago acepta en su negocio? (opción 6 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1764_7 IS '¿Cuáles formas de pago acepta en su negocio? (opción 7 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1765 IS 'En el año anterior ¿solicitó algún crédito o préstamo para la gestión de su negocio o actividad económica?';
+COMMENT ON COLUMN staging.inclusion_financiera.p1567 IS '¿Por qué no ha solicitado algún crédito o préstamo?';
+COMMENT ON COLUMN staging.inclusion_financiera.p1569 IS '¿A quién solicitó el préstamo?';
+COMMENT ON COLUMN staging.inclusion_financiera.p1568 IS '¿Obtuvo el crédito o préstamo solicitado?';
+COMMENT ON COLUMN staging.inclusion_financiera.p1571_1 IS '¿Por qué no obtuvo el crédito o préstamo solicitado? (opción 1 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1571_2 IS '¿Por qué no obtuvo el crédito o préstamo solicitado? (opción 2 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1571_3 IS '¿Por qué no obtuvo el crédito o préstamo solicitado? (opción 3 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1571_4 IS '¿Por qué no obtuvo el crédito o préstamo solicitado? (opción 4 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1571_5 IS '¿Por qué no obtuvo el crédito o préstamo solicitado? (opción 5 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1571_6 IS '¿Por qué no obtuvo el crédito o préstamo solicitado? (opción 6 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1570 IS '¿Para qué utilizó (o va utilizar) el crédito que solicitó?';
+COMMENT ON COLUMN staging.inclusion_financiera.p1570_1 IS 'Porcentaje invertido en el negocio';
+COMMENT ON COLUMN staging.inclusion_financiera.p1570_2 IS 'Porcentaje para cubrir gastos personales u otros';
+COMMENT ON COLUMN staging.inclusion_financiera.p1572_1 IS '¿El dinero destinado al negocio lo gastó en? (opción 1 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1572_2 IS '¿El dinero destinado al negocio lo gastó en? (opción 2 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1572_3 IS '¿El dinero destinado al negocio lo gastó en? (opción 3 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1572_4 IS '¿El dinero destinado al negocio lo gastó en? (opción 4 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1572_5 IS '¿El dinero destinado al negocio lo gastó en? (opción 5 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1572_6 IS '¿El dinero destinado al negocio lo gastó en? (opción 6 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p3014 IS 'En el año anterior ¿Ahorró dinero de su negocio o actividad?';
+COMMENT ON COLUMN staging.inclusion_financiera.p1573_1 IS '¿En qué va a usar o usó el dinero que ahorró? (opción 1 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1573_2 IS '¿En qué va a usar o usó el dinero que ahorró? (opción 2 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1573_3 IS '¿En qué va a usar o usó el dinero que ahorró? (opción 3 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1573_4 IS '¿En qué va a usar o usó el dinero que ahorró? (opción 4 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1573_5 IS '¿En qué va a usar o usó el dinero que ahorró? (opción 5 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1573_6 IS '¿En qué va a usar o usó el dinero que ahorró? (opción 6 de respuesta múltiple)';
+COMMENT ON COLUMN staging.inclusion_financiera.p1574 IS '¿Por qué no ahorró?';
+COMMENT ON COLUMN staging.inclusion_financiera.p1771 IS '¿En dónde ahorró?';
+COMMENT ON COLUMN staging.inclusion_financiera.clase_te IS 'Clase (cabecera / centros poblados y rural disperso)';
+COMMENT ON COLUMN staging.inclusion_financiera.cod_depto IS 'Departamento (código DANE)';
+COMMENT ON COLUMN staging.inclusion_financiera.area IS 'Ciudades principales y áreas metropolitanas';
+COMMENT ON COLUMN staging.inclusion_financiera.f_exp IS 'Factor de expansión del módulo (referencia, NO usar en agregaciones)';
+COMMENT ON COLUMN staging.inclusion_financiera.fex_c IS 'Factor de expansión departamental oficial 2023';
+
 -- ============================================================================
--- ÍNDICES — aceleran filtros y joins frecuentes en las queries de negocio
--- (cod_depto/grupos4/grupos12 para cruces geográficos y sectoriales;
---  fex_c para agregaciones ponderadas)
+-- 3. ÍNDICES
+-- Aceleran los filtros y joins más frecuentes en las queries de negocio:
+-- cod_depto / grupos4 / grupos12 / area para cruces geográficos y
+-- sectoriales, y fex_c para agregaciones ponderadas.
 -- ============================================================================
 
+-- 3.1 Identificación
 CREATE INDEX idx_identificacion_depto   ON staging.identificacion (cod_depto);
 CREATE INDEX idx_identificacion_grupos4  ON staging.identificacion (grupos4);
 CREATE INDEX idx_identificacion_grupos12 ON staging.identificacion (grupos12);
 CREATE INDEX idx_identificacion_fexc     ON staging.identificacion (fex_c);
 
+-- 3.2 Características
 CREATE INDEX idx_caracteristicas_depto   ON staging.caracteristicas (cod_depto);
 CREATE INDEX idx_caracteristicas_fexc    ON staging.caracteristicas (fex_c);
 
+-- 3.3 Ubicación
 CREATE INDEX idx_ubicacion_depto         ON staging.ubicacion (cod_depto);
 CREATE INDEX idx_ubicacion_fexc          ON staging.ubicacion (fex_c);
 
+-- 3.4 Ventas
 CREATE INDEX idx_ventas_depto            ON staging.ventas (cod_depto);
 CREATE INDEX idx_ventas_fexc             ON staging.ventas (fex_c);
 
+-- 3.5 Factores de expansión
 CREATE INDEX idx_factores_exp_fexc       ON staging.factores_exp (fex_c);
 
--- ============================================================================
--- PKs en RAW — definidas inline en cada CREATE TABLE; garantizan unicidad de
--- la llave compuesta desde la carga. NOTA: si algún CSV trae duplicados de
--- llave, el INSERT fallará aquí y no en staging (fail-fast en la bodega
--- inmutable, donde debe detectarse).
--- ============================================================================
+-- 3.6 Inclusión financiera
+CREATE INDEX idx_inclusion_financiera_depto
+    ON staging.inclusion_financiera (cod_depto);
+CREATE INDEX idx_inclusion_financiera_area
+    ON staging.inclusion_financiera (area);
+CREATE INDEX idx_inclusion_financiera_fexc
+    ON staging.inclusion_financiera (fex_c);
