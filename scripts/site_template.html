@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} · EMICRON 2023</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:type" content="article">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#EFF2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1511" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='9' fill='%230B7A55'/%3E%3Crect y='9' width='32' height='9' fill='%23D99100'/%3E%3Crect y='18' width='32' height='9' fill='%231D63A8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,500..800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script defer src="{{PLOTLY_SRC}}"{{PLOTLY_SRI}} crossorigin="anonymous"></script>
+<style>
+:root{
+  --paper:#EFF2EC; --surface:#FFFFFF; --ink:#14221C; --muted:#55645C; --line:#D3DAD0;
+  --t1:#0B7A55; --t1-lo:#7CC4A4; --t2:#D99100; --t2-lo:#F3CF83; --t3:#1D63A8; --t3-lo:#8DB7E3; --slate:#2F4A3F;
+  --display:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
+  --sans:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#0C1511; --surface:#14211B; --ink:#E7EFE9; --muted:#9CAEA3; --line:#25372E;
+        --t1:#3FBF93; --t1-lo:#2E8F6D; --t2:#F2B83B; --t2-lo:#A67B1E; --t3:#6FA8EC; --t3-lo:#3B6EA8; --slate:#9FD1BC}
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 1.0625rem/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--t3)}
+:focus-visible{outline:2px solid var(--t3);outline-offset:3px;border-radius:2px}
+.skip{position:absolute;left:12px;top:-60px;background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:6px;z-index:20}
+.skip:focus{top:12px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+/* Barra: tres franjas de color = secciones */
+.bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar::before{content:"";display:block;height:5px;background:linear-gradient(90deg,var(--t1) 0 33.3%,var(--t2) 0 66.6%,var(--t3) 0)}
+.bar .wrap{display:flex;align-items:center;gap:24px;min-height:52px}
+.brand{font:700 1.05rem/1 var(--display);letter-spacing:-.01em;color:var(--ink);text-decoration:none;white-space:nowrap}
+.bar nav{min-width:0;margin-left:auto}
+.bar ul{list-style:none;margin:0;padding:0;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.bar a.nav{display:block;padding:14px 12px;font-size:.92rem;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap;margin-bottom:-1px}
+.bar a.nav:hover{color:var(--ink)}
+.bar a.nav[aria-current="true"]{color:var(--ink);font-weight:500;border-bottom-color:var(--c)}
+
+/* Portada */
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:56px;align-items:center;padding-block:72px 24px}
+.kicker{margin:0 0 16px;color:var(--muted);font-size:.95rem}
+h1{font:700 clamp(2.8rem,6.4vw,5.2rem)/.98 var(--display);font-variation-settings:"wdth" 82;letter-spacing:-.03em;margin:0 0 28px;max-width:10ch}
+.lede{font-size:1.18rem;line-height:1.6;max-width:56ch;margin:0 0 32px}
+.facts{display:flex;flex-wrap:wrap;gap:12px 36px;margin:0;font-size:.9rem}
+.facts dt{color:var(--muted);margin:0}
+.facts dd{margin:0;font-weight:500}
+
+/* Tirilla de caja: el resumen vive en el objeto que un micronegocio ya conoce */
+.tirilla-wrap{filter:drop-shadow(0 12px 16px rgb(10 30 20 / .14));justify-self:center;width:100%;max-width:370px}
+.tirilla{background:var(--surface);font:400 .8rem/1.5 var(--mono);padding:26px 22px 34px;
+  -webkit-mask:linear-gradient(#000,#000) top/100% calc(100% - 10px) no-repeat,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/20px 10px repeat-x;
+  mask:linear-gradient(#000,#000) top/100% calc(100% - 10px) no-repeat,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/20px 10px repeat-x}
+@media (min-width:900px){.tirilla-wrap{transform:rotate(1.2deg)}}
+.t-head{text-align:center;margin:0 0 14px;padding-bottom:12px;border-bottom:2px dashed var(--line)}
+.t-head b{display:block;font:500 .95rem var(--mono)}
+.t-head span{color:var(--muted)}
+.tirilla ul{list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.t-row{display:block;color:var(--ink);text-decoration:none}
+.t-row:hover .t-top b{text-decoration:underline}
+.t-top{display:flex;align-items:baseline;gap:8px}
+.t-top i{flex:1;min-width:12px;border-bottom:2px dotted var(--muted);opacity:.6;transform:translateY(-3px)}
+.t-top b{font-weight:500;font-size:.95rem}
+.t-det{display:block;color:var(--muted);margin-top:2px}
+.t-foot{margin:16px 0 0;padding-top:12px;border-top:2px dashed var(--line);text-align:center;color:var(--muted)}
+
+/* Definiciones: el color de cada una es el de su gráfico */
+.defs{padding-block:56px 8px}
+.defs ul{list-style:none;margin:0 0 20px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:28px}
+.defs li{border-top:4px solid var(--t1);padding-top:12px;font-size:.96rem;line-height:1.55}
+.defs li:nth-child(2){border-top-color:var(--t2)}
+.defs li:nth-child(3){border-top-color:var(--t3)}
+.defs li strong{display:block;font:700 1.25rem/1.25 var(--display);letter-spacing:-.01em;margin-bottom:4px}
+.defs p{color:var(--muted);font-size:.9rem;max-width:72ch;margin:0}
+
+/* Secciones: texto a la izquierda, gráfico a la derecha; ancho completo si el gráfico es vertical */
+.tone-1{--c:var(--t1)}.tone-2{--c:var(--t2)}.tone-3{--c:var(--t3)}
+.sec{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:24px 48px;align-items:start;padding-top:96px;scroll-margin-top:40px}
+.sec.wide{grid-template-columns:minmax(0,1fr)}
+.sec-text{position:sticky;top:88px}
+.sec.wide .sec-text{position:static;max-width:68ch}
+.sec h2{font:700 clamp(1.5rem,2.3vw,1.9rem)/1.15 var(--display);letter-spacing:-.02em;margin:0 0 14px;padding-left:16px;border-left:6px solid var(--c)}
+.prose{color:var(--muted);font-size:1rem}
+.prose p{margin:0 0 12px}
+code{font:500 .84em var(--mono);background:color-mix(in srgb,var(--t1) 13%,transparent);padding:.1em .4em;border-radius:3px;overflow-wrap:anywhere}
+
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:3px 3px 12px 12px;padding:20px 22px 6px;min-width:0}
+figcaption h3{font:600 1rem/1.35 var(--sans);margin:0 0 10px}
+.plot-scroll{overflow-x:auto;margin-inline:-6px}
+.plot{width:100%}
+.plot:not(.js-plotly-plot){background:linear-gradient(90deg,var(--line),transparent,var(--line)) 0 0/200% 100%;border-radius:6px;opacity:.5}
+@media (prefers-reduced-motion:no-preference){.plot:not(.js-plotly-plot){animation:sh 1.4s linear infinite}}
+@keyframes sh{to{background-position:-200% 0}}
+.plot-error{padding:40px 16px;text-align:center;color:var(--muted)}
+
+details.data{margin:4px 0 12px;font-size:.9rem}
+details.data summary{cursor:pointer;color:var(--ink);font-weight:500;padding:8px 0;width:max-content}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:320px;font-variant-numeric:tabular-nums}
+caption{text-align:left;color:var(--muted);padding:4px 0 8px}
+th,td{padding:8px 12px 8px 0;border-bottom:1px solid var(--line);text-align:left}
+td+td,th+th{text-align:right;padding-right:0;padding-left:16px}
+th{font-weight:600}
+
+footer{margin-top:96px;padding:22px 0 56px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+
+@media (max-width:900px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:44px}
+  .sec{grid-template-columns:minmax(0,1fr);padding-top:72px}
+  .sec-text{position:static}
+  .bar .wrap{gap:12px}
+}
+@media (max-width:560px){figure{padding:14px 12px 4px}.wrap{padding:0 18px}}
+@media print{.bar,.skip{display:none}.tirilla-wrap{transform:none;filter:none}figure{break-inside:avoid}body{background:#fff}}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header class="bar"><div class="wrap">
+  <a class="brand" href="#contenido">EMICRON 2023</a>
+  <nav aria-label="Secciones del reporte"><ul>{{NAV}}</ul></nav>
+</div></header>
+<main id="contenido" class="wrap">
+  <header class="hero">
+    <div>
+      <p class="kicker">{{KICKER}}</p>
+      <h1>{{H1}}</h1>
+      <p class="lede">{{LEDE}}</p>
+      <dl class="facts">{{FACTS}}</dl>
+    </div>
+    <div class="tirilla-wrap"><aside class="tirilla" aria-label="Resumen de hallazgos">
+      <p class="t-head"><b>Resumen</b><span>EMICRON 2023</span></p>
+      <ul>{{TIRILLA}}</ul>
+      <p class="t-foot">Cifras ponderadas con fex_c</p>
+    </aside></div>
+  </header>
+  <section class="defs" aria-labelledby="h-defs">
+    <h2 class="visually-hidden" id="h-defs" style="position:absolute;left:-9999px">Qué mide cada indicador</h2>
+    {{DEFS}}
+  </section>
+  {{SECTIONS}}
+</main>
+<footer><div class="wrap">{{FOOTER}}</div></footer>
+
+<script>
+const SPECS = {{SPECS}};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const axTitle = a => (a && a.title && (a.title.text || a.title)) || "";
+
+function styled(spec){
+  const k = ((spec.tone - 1) % 3) + 1;
+  const c = {ink:css("--ink"), muted:css("--muted"), line:css("--line"), surface:css("--surface"),
+             slate:css("--slate"), amber:css("--t2"), hi:css("--t"+k), lo:css("--t"+k+"-lo")};
+  const pal = [c.slate, c.amber], L = spec.layout, grouped = spec.data.length > 1;
+  const data = spec.data.map((t,i) => ({...t,
+    marker: {...t.marker, ...(t.marker.coloraxis ? {} : {color:pal[i%2]}), line:{width:0}, cornerradius:4},
+    textfont: {color:c.ink, size:12}}));
+  const ax = (a, extra) => ({...a, ...extra, title:{text:axTitle(a), font:{size:12, color:c.muted}},
+    gridcolor:c.line, linecolor:c.line, zerolinecolor:c.line, tickfont:{size:12, color:c.muted}, automargin:true});
+  const layout = {
+    separators:",.", height: spec.h, barmode: L.barmode, bargap: grouped ? .24 : .3, bargroupgap: .06,
+    font: {family:'"Hanken Grotesk",system-ui,sans-serif', size:13, color:c.ink},
+    paper_bgcolor:"rgba(0,0,0,0)", plot_bgcolor:"rgba(0,0,0,0)",
+    margin: {l:8, r:24, t: grouped ? 44 : 12, b:8},
+    xaxis: ax(L.xaxis), yaxis: ax(L.yaxis),
+    hoverlabel: {bgcolor:c.ink, bordercolor:c.ink, font:{color:c.surface, size:13}},
+    coloraxis: {showscale:false, colorscale:[[0,c.lo],[1,c.hi]]},
+    legend: {orientation:"h", x:0, y:1.02, yanchor:"bottom", font:{size:12, color:c.ink}, title:{text:""}}
+  };
+  return {data, layout};
+}
+function renderAll(){
+  if(!window.Plotly){
+    document.querySelectorAll(".plot").forEach(el => el.outerHTML = '<p class="plot-error">No se pudo cargar la librería de gráficos. Revisa tu conexión y recarga la página.</p>');
+    return;
+  }
+  SPECS.forEach(s => { const {data, layout} = styled(s);
+    Plotly.react(s.id, data, layout, {responsive:true, displaylogo:false,
+      modeBarButtonsToRemove:["select2d","lasso2d","autoScale2d"]}); });
+}
+window.addEventListener("load", renderAll);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => window.Plotly && renderAll());
+
+const links = [...document.querySelectorAll("a.nav")];
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if(e.isIntersecting) links.forEach(a => a.setAttribute("aria-current", a.hash === "#" + e.target.id));
+}), {rootMargin:"-30% 0px -60% 0px"});
+document.querySelectorAll(".sec").forEach(s => io.observe(s));
+</script>
+</body>
+</html>
